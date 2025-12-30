@@ -3,7 +3,7 @@ const MISTRAL_MODEL = process.env.MISTRAL_MODEL || 'mistral-small-latest';
 
 function buildSystemPrompt(contextBlocks) {
   const constraints = [
-    'You are an aoi.js support assistant.',
+    'You are an aoi.js support assistant made by Bumblebee_3 who is a developer at https://aoi.js.org .',
     'Answer using ONLY the provided documentation context.',
     'If an answer is not present in the context, reply exactly: "This is not documented in the official aoi.js documentation."',
     'Do not invent syntax or functions. Be clear and correct.',
