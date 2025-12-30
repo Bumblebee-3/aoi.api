@@ -21,6 +21,16 @@ const limiter = rateLimit({
 });
 app.use(limiter);
 
+// Serve static index
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+app.use(express.static(path.join(__dirname, '..', 'public')));
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+});
+
 app.get('/api', (req, res) => {
   const endpoints = [
     {
@@ -37,7 +47,7 @@ app.get('/api', (req, res) => {
         { name: 'request', required: true, description: 'Your aoi.js question.' },
         { name: 'style', required: false, description: 'Optional response style (e.g., simple).' }
       ],
-      example: '/api/basicQuery?request=How%20to%20add%20a%20button%3F&style=simple'
+      example: '/api/basicQuery?request=What+is+aoi.js&style=simple'
     },
     {
       path: '/api/function',
@@ -55,6 +65,45 @@ app.get('/api', (req, res) => {
     description: 'Doc-constrained API for aoi.js help, functions reference, and code generation.',
     endpoints
   });
+});
+
+// Minimal Q&A endpoint that always returns JSON
+app.get('/api/basicQuery', async (req, res) => {
+  try {
+    const { q, request, max_tokens } = req.query || {};
+    const prompt = sanitizeQuestion(q || request);
+    if (!prompt) return res.status(400).json({ error: 'Invalid question' });
+
+    const topK = Number(process.env.TOP_K || 8);
+    const results = await searchByText(prompt, { k: topK });
+    const threshold = Number(process.env.SIMILARITY_THRESHOLD || 0.60);
+    const topScore = results[0]?.score || 0;
+
+    const contextChunks = results.slice(0, Number(process.env.CONTEXT_CHUNKS || 6)).map(r => ({
+      file_path: r.file_path,
+      section_title: safeMeta(r.section_title),
+      content: r.content
+    }));
+    const sources = Array.from(new Set(contextChunks.map(b => relativeDocPath(b.file_path))));
+
+    if (!results.length || topScore < threshold) {
+      return res.json({
+        answer: 'This is not documented in the official aoi.js documentation.',
+        sources: [],
+        confidence: Number(topScore.toFixed(4))
+      });
+    }
+
+    const answer = await generateAnswer({
+      question: `${prompt}\n\nAnswer strictly using the provided documentation context. If something is unknown or not in context, say it is not documented.`,
+      contextBlocks: contextChunks,
+      maxTokens: Number(max_tokens || 350)
+    });
+    return res.json({ answer, sources, confidence: Number(topScore.toFixed(4)) });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ error: 'Internal error' });
+  }
 });
 
 app.get('/api/basicQuery', async (req, res) => {
