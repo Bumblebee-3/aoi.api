@@ -167,7 +167,7 @@
         $('#queryResult').textContent = 'Please enter a request.';
         return;
       }
-      const url = new URL('/api/basicuery', window.location.origin);
+      const url = new URL('/api/basicQuery', window.location.origin);
       url.searchParams.set('request', request);
       if (mode) url.searchParams.set('mode', mode);
       try {
