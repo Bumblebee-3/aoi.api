@@ -1,8 +1,23 @@
 import Database from 'better-sqlite3';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
-const DB_PATH = process.env.VECTOR_DB_PATH || new URL('../../data/vectors.db', import.meta.url).pathname;
+// Resolve a proper filesystem path and ensure parent directory exists
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const resolvedPath = process.env.VECTOR_DB_PATH || path.resolve(__dirname, '../../data/vectors.db');
 
-const db = new Database(DB_PATH);
+if (resolvedPath && !resolvedPath.startsWith(':memory:')) {
+  const parentDir = path.dirname(resolvedPath);
+  try {
+    fs.mkdirSync(parentDir, { recursive: true });
+  } catch {
+    // ignore mkdir errors; DB open will surface real issues
+  }
+}
+
+const db = new Database(resolvedPath);
 
 db.pragma('journal_mode = WAL');
 db.exec(`
