@@ -11,6 +11,8 @@ import { normalizeFuncName, extractFunctionMetadata, relativeDocPath } from './u
 import apiRootRouter from './routes/apiRoot.js';
 import basicQueryRouter from './routes/basicQuery.js';
 import functionRouter from './routes/function.js';
+import generateStrictRouter from './routes/generateStrict.js';
+import validateAoiRouter from './routes/validateAoi.js';
 
 const app = express();
 app.disable('x-powered-by');
@@ -38,6 +40,8 @@ app.get('/', (req, res) => {
 app.use('/api', apiRootRouter);
 app.use('/api', basicQueryRouter);
 app.use('/api', functionRouter);
+app.use('/api', generateStrictRouter);
+app.use('/api', validateAoiRouter);
 
 // Minimal Q&A endpoint that always returns JSON
 // Endpoints moved to route files under ./routes

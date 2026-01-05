@@ -36,6 +36,9 @@
       50% { transform: translate(10%, 5%) rotate(10deg); }
       100% { transform: translate(-10%, -10%) rotate(0deg); }
     }
+    /* Improve code/output readability on small screens */
+    .code-out { white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
+    .wrap-any { overflow-wrap: anywhere; word-break: break-word; }
   </style>
   <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
     <div class="absolute left-[-10%] top-[-10%] h-[40rem] w-[40rem] rounded-full bg-cyan-400/10 blur-3xl animate-[drift_22s_ease-in-out_infinite]"></div>
@@ -50,8 +53,14 @@
         <span class="inline-flex h-8 w-8 items-center justify-center rounded bg-cyan-500/20 text-cyan-200 font-bold">a</span>
         <h1 class="text-xl font-semibold text-slate-100">aoi.js RAG API</h1>
       </div>
-      <nav class="text-sm">
+      <nav class="text-sm flex items-center gap-4">
         <a href="https://aoi.js.org/" target="_blank" rel="noopener" class="text-cyan-300 hover:text-cyan-200">Docs</a>
+        <button id="loginBtn" class="rounded bg-brand-600 px-3 py-1.5 text-white text-sm hover:bg-brand-700">Login with Discord</button>
+        <div id="userMenu" class="hidden items-center gap-3">
+          <img id="userAvatar" src="" alt="avatar" class="h-8 w-8 rounded-full border border-slate-700" />
+          <span id="userName" class="text-slate-200"></span>
+          <button id="logoutBtn" class="rounded bg-slate-700 px-3 py-1.5 text-white text-sm hover:bg-slate-600">Logout</button>
+        </div>
       </nav>
     </div>
   </header>
@@ -78,52 +87,93 @@
           <button id="refreshBtn" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Refresh</button>
         </div>
         <div class="px-6 py-4">
-          <div class="overflow-x-auto">
-            <table class="w-full text-sm">
+          <div class="overflow-x-auto hidden md:block">
+            <table class="w-full text-sm table-fixed">
+              <colgroup>
+                <col style="width:8%">
+                <col style="width:18%">
+                <col style="width:22%">
+                <col style="width:42%">
+                <col style="width:10%">
+              </colgroup>
               <thead>
                 <tr class="text-left text-slate-400">
                   <th class="py-2">Method</th>
                   <th class="py-2">Path</th>
                   <th class="py-2">Description</th>
+                  <th class="py-2">Params</th>
                   <th class="py-2">Example</th>
                 </tr>
               </thead>
               <tbody id="endpointsTable"></tbody>
             </table>
           </div>
+          <!-- Mobile cards -->
+          <div id="endpointsCards" class="md:hidden grid gap-3"></div>
         </div>
       </div>
     </section>
 
-    <!-- Try It -->
+    <!-- Try Endpoints -->
     <section class="grid gap-6 md:grid-cols-2">
-      <!-- Query tester -->
+      <!-- basicQuery tester -->
       <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
         <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/basicQuery</h3></div>
         <div class="px-6 py-4 space-y-3">
           <label class="block text-sm font-medium text-slate-300">Request</label>
-          <input id="queryRequest" type="text" placeholder="How to add a button?" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
+          <input id="tq_request" type="text" placeholder="How to add a button?" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
           <label class="block text-sm font-medium text-slate-300">Mode</label>
-          <select id="queryMode" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2">
+          <select id="tq_mode" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2">
             <option value="">answer</option>
             <option value="code">code</option>
           </select>
-          <button id="runQuery" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
-          <pre id="queryResult" class="mt-3 max-h-64 overflow-auto rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
+          <button id="btn_run_basicQuery" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
+          <pre id="out_basicQuery" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
         </div>
       </div>
 
-      <!-- Function tester -->
+      <!-- function tester -->
       <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
         <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/function</h3></div>
         <div class="px-6 py-4 space-y-3">
           <label class="block text-sm font-medium text-slate-300">Function name (without $)</label>
-          <input id="funcName" type="text" placeholder="addCmdReactions" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
-          <button id="runFunc" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
-          <pre id="funcResult" class="mt-3 max-h-64 overflow-auto rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
+          <input id="tf_name" type="text" placeholder="addButton" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
+          <button id="btn_run_function" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
+          <pre id="out_function" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
+        </div>
+      </div>
+
+      <!-- generateStrict tester -->
+      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
+        <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/generateStrict</h3></div>
+        <div class="px-6 py-4 space-y-3">
+          <label class="block text-sm font-medium text-slate-300">Request</label>
+          <input id="tg_request" type="text" placeholder="ping command in aoi.js" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
+          <label class="block text-sm font-medium text-slate-300">Max tokens (optional)</label>
+          <input id="tg_tokens" type="number" min="100" max="2000" placeholder="600" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
+          <button id="btn_run_generateStrict" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
+          <pre id="out_generateStrict" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
+        </div>
+      </div>
+
+      <!-- validateAoi tester -->
+      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
+        <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/validateAoi</h3></div>
+        <div class="px-6 py-4 space-y-3">
+          <label class="block text-sm font-medium text-slate-300">aoi.js Code (supports fenced blocks)</label>
+          <textarea id="tv_code" rows="5" placeholder="```js\n$sendMessage[hello;false]\n```" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500"></textarea>
+          <label class="block text-sm font-medium text-slate-300">Request / intent (optional)</label>
+          <input id="tv_intent" type="text" placeholder="diagnose" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
+          <div class="flex items-center gap-2">
+            <input id="tv_fix" type="checkbox" class="rounded border border-slate-700 bg-slate-800" />
+            <label for="tv_fix" class="text-sm text-slate-300">Request minimal fix (mode=fix)</label>
+          </div>
+          <button id="btn_run_validateAoi" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
+          <pre id="out_validateAoi" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
         </div>
       </div>
     </section>
+    
 
     <!-- Footer -->
     <footer class="mt-12 text-center text-xs text-slate-500">
@@ -133,6 +183,10 @@
 
   <script>
     const $ = (sel) => document.querySelector(sel);
+
+    function getCookie(name) {
+      return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1] || '';
+    }
 
     async function loadApiIndex() {
       try {
@@ -146,62 +200,120 @@
         (data.endpoints || []).forEach(ep => {
           const tr = document.createElement('tr');
           tr.className = 'border-t';
+          const paramsHtml = (ep.params||[]).map(p=>{
+            const req = p.required ? '<span class="text-rose-300">*</span>' : '<span class="text-slate-500">(opt)</span>';
+            return `<div class=\"py-0.5\"><span class=\"font-mono\">${p.name}</span> ${req}<span class=\"text-slate-400\"> - ${p.description||''}</span></div>`;
+          }).join('');
           tr.innerHTML = `
-            <td class="py-2"><span class="inline-block rounded bg-gray-800 px-2 py-0.5 text-white text-xs">${ep.method}</span></td>
-            <td class="py-2 font-mono">${ep.path}</td>
-            <td class="py-2">${ep.description || ''}</td>
-            <td class="py-2 font-mono text-xs"><a class="text-brand-600 hover:underline" href="${ep.example}" target="_blank" rel="noopener">${ep.example || ''}</a></td>
+            <td class="py-2 align-top"><span class="inline-block rounded bg-gray-800 px-2 py-0.5 text-white text-xs">${ep.method}</span></td>
+            <td class="py-2 font-mono align-top">${ep.path}</td>
+            <td class="py-2 align-top wrap-any">${ep.description || ''}</td>
+            <td class="py-2 align-top wrap-any">${paramsHtml || ''}</td>
+            <td class="py-2 font-mono text-xs align-top wrap-any"><a class="text-brand-600 hover:underline break-all" href="${ep.example}" target="_blank" rel="noopener">${ep.example || ''}</a></td>
           `;
           tbody.appendChild(tr);
         });
+
+        // Mobile cards
+        const cards = document.getElementById('endpointsCards');
+        if (cards) {
+          cards.innerHTML = '';
+          (data.endpoints || []).forEach(ep => {
+            const card = document.createElement('div');
+            card.className = 'rounded border border-slate-800 bg-slate-900/80 p-4';
+            const paramsHtml = (ep.params||[]).map(p=>{
+              const req = p.required ? '<span class="text-rose-300">*</span>' : '<span class="text-slate-500">(opt)</span>';
+              return `<div class=\"py-0.5\"><span class=\"font-mono\">${p.name}</span> ${req}<span class=\"text-slate-400\"> - ${p.description||''}</span></div>`;
+            }).join('');
+            card.innerHTML = `
+              <div class=\"flex items-start justify-between gap-3\">
+                <div>
+                  <div class=\"text-xs uppercase tracking-wide text-slate-400\">${ep.method}</div>
+                  <div class=\"font-mono text-slate-100 break-all\">${ep.path}</div>
+                </div>
+                <a class=\"text-brand-600 text-xs hover:underline break-all\" href=\"${ep.example}\" target=\"_blank\" rel=\"noopener\">Example</a>
+              </div>
+              <p class=\"mt-2 text-sm text-slate-300 wrap-any\">${ep.description || ''}</p>
+              ${paramsHtml ? `<div class=\\"mt-3 text-xs text-slate-300 wrap-any\\">${paramsHtml}</div>` : ''}
+            `;
+            cards.appendChild(card);
+          });
+        }
       } catch (e) {
         $('#api-name').textContent = 'Failed to load API index';
         $('#api-desc').textContent = e.message;
       }
     }
 
-    async function runQueryTester() {
-      const request = $('#queryRequest').value.trim();
-      const mode = $('#queryMode').value.trim();
-      if (!request) {
-        $('#queryResult').textContent = 'Please enter a request.';
-        return;
-      }
-      const url = new URL('/api/basicQuery', window.location.origin);
-      url.searchParams.set('request', request);
-      if (mode) url.searchParams.set('mode', mode);
+    async function checkSession() {
       try {
-        const res = await fetch(url.toString());
-        const json = await res.json();
-        $('#queryResult').textContent = JSON.stringify(json, null, 2);
-      } catch (e) {
-        $('#queryResult').textContent = e.message;
+        const res = await fetch('/auth/me');
+        if (!res.ok) throw new Error('not logged in');
+        const me = await res.json();
+        // Header UI
+        $('#loginBtn').classList.add('hidden');
+        $('#userMenu').classList.remove('hidden');
+        $('#userName').textContent = me.username || 'User';
+        const defaultIndex = (()=>{ try { return Number(BigInt(me.discord_id||'0') % 6n); } catch { return 0; } })();
+        const avatarUrl = me.avatar && me.discord_id
+          ? `https://cdn.discordapp.com/avatars/${me.discord_id}/${me.avatar}.png`
+          : `https://cdn.discordapp.com/embed/avatars/${defaultIndex}.png`;
+        $('#userAvatar').src = avatarUrl;
+      } catch {
+        // Not logged in
+        $('#loginBtn').classList.remove('hidden');
+        $('#userMenu').classList.add('hidden');
       }
     }
 
-    async function runFuncTester() {
-      const name = $('#funcName').value.trim();
-      if (!name) {
-        $('#funcResult').textContent = 'Please enter a function name.';
-        return;
-      }
-      const url = new URL('/api/function', window.location.origin);
-      url.searchParams.set('name', name);
+    async function doLogout() {
+      const csrf = decodeURIComponent(getCookie('csrf_token'));
       try {
-        const res = await fetch(url.toString());
-        const json = await res.json();
-        $('#funcResult').textContent = JSON.stringify(json, null, 2);
-      } catch (e) {
-        $('#funcResult').textContent = e.message;
+        await fetch('/auth/logout', { method: 'POST', headers: { 'x-csrf-token': csrf } });
+      } finally {
+        location.reload();
       }
     }
+
 
     document.addEventListener('DOMContentLoaded', () => {
       $('#year').textContent = new Date().getFullYear();
       loadApiIndex();
       $('#refreshBtn').addEventListener('click', loadApiIndex);
-      $('#runQuery').addEventListener('click', runQueryTester);
-      $('#runFunc').addEventListener('click', runFuncTester);
+      $('#loginBtn').addEventListener('click', () => { window.location.href = '/auth/login'; });
+      $('#logoutBtn').addEventListener('click', doLogout);
+      checkSession();
+      // bind testers
+      document.getElementById('btn_run_basicQuery')?.addEventListener('click', async ()=>{
+        const request = (document.getElementById('tq_request').value||'').trim();
+        const mode = (document.getElementById('tq_mode').value||'').trim();
+        if(!request){ document.getElementById('out_basicQuery').textContent='Please enter a request.'; return; }
+        const url = new URL('/api/basicQuery', window.location.origin);
+        url.searchParams.set('request', request);
+        if(mode) url.searchParams.set('mode', mode);
+        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_basicQuery').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_basicQuery').textContent=e.message; }
+      });
+      document.getElementById('btn_run_function')?.addEventListener('click', async ()=>{
+        const name = (document.getElementById('tf_name').value||'').trim();
+        if(!name){ document.getElementById('out_function').textContent='Please enter a function name.'; return; }
+        const url = new URL('/api/function', window.location.origin); url.searchParams.set('name', name);
+        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_function').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_function').textContent=e.message; }
+      });
+      document.getElementById('btn_run_generateStrict')?.addEventListener('click', async ()=>{
+        const request = (document.getElementById('tg_request').value||'').trim();
+        const maxTokens = (document.getElementById('tg_tokens').value||'').trim();
+        if(!request){ document.getElementById('out_generateStrict').textContent='Please enter a request.'; return; }
+        const url = new URL('/api/generateStrict', window.location.origin); url.searchParams.set('request', request); if(maxTokens) url.searchParams.set('max_tokens', maxTokens);
+        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_generateStrict').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_generateStrict').textContent=e.message; }
+      });
+      document.getElementById('btn_run_validateAoi')?.addEventListener('click', async ()=>{
+        const code = (document.getElementById('tv_code').value||'').trim();
+        const intent = (document.getElementById('tv_intent').value||'').trim();
+        const fix = document.getElementById('tv_fix').checked;
+        if(!code){ document.getElementById('out_validateAoi').textContent='Please enter aoi.js code.'; return; }
+        const url = new URL('/api/validateAoi', window.location.origin); url.searchParams.set('code', code); if(intent) url.searchParams.set('request', intent); if(fix) url.searchParams.set('mode','fix');
+        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_validateAoi').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_validateAoi').textContent=e.message; }
+      });
     });
   </script>
 </body>

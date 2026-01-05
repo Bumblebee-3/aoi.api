@@ -11,7 +11,7 @@ Doc-constrained Node.js API that answers aoi.js questions and can generate minim
 ## Setup
 
 ```zsh
-cd assistant-api
+cd aoi.api
 cp .env.example .env
 # set DOCS_PATH, GEMINI_API_KEY, MISTRAL_API_KEY
 npm install
@@ -58,6 +58,33 @@ curl -sS 'http://localhost:${PORT:-3333}/api/query?request=Create%20a%20simple%2
 curl -sS 'http://localhost:${PORT:-3333}/api/function?name=addButton' | jq
 ```
 
+`GET /api/generateStrict` — Strict aoi.js code generator from local docs only
+- Query params:
+  - `request` (required): user intent (e.g., "economy daily command")
+  - `max_tokens` (optional): cap for generation
+```zsh
+curl -sS 'http://localhost:${PORT:-3333}/api/generateStrict?request=Economy%20daily%20command' | jq
+```
+
+`GET /api/validateAoi` — Validate aoi.js code (syntax, docs compliance, logic)
+- Query params:
+  - `code` (required): aoi.js code (fences allowed)
+  - `request` (required): intent (e.g., "diagnose" or "fix my code")
+  - `mode` (optional): set to `fix` to request a deterministic simple repair when possible
+```zsh
+curl -sS 'http://localhost:${PORT:-3333}/api/validateAoi' \
+  --get \
+  --data-urlencode 'request=diagnose my command' \
+  --data-urlencode 'code=```js\n$if[$getUserVar[balance]>=100]\n$setUserVar[balance;$math[$getUserVar[balance]-100];$authorID]\n$else\n$sendMessage[Not enough balance;no]\n$endif\n```' | jq
+
+# Request deterministic repair (adds missing $endif if needed)
+curl -sS 'http://localhost:${PORT:-3333}/api/validateAoi' \
+  --get \
+  --data-urlencode 'request=fix my flow' \
+  --data-urlencode 'mode=fix' \
+  --data-urlencode 'code=```aoi$if[$message==hi]$sendMessage[Hello;false]```' | jq
+```
+
 ## Environment
 - `DOCS_PATH`: root of local docs (default `../website/src/content/docs` if set in ingest script)
 - `PORT`: server port (default `3333`)
@@ -65,9 +92,12 @@ curl -sS 'http://localhost:${PORT:-3333}/api/function?name=addButton' | jq
 - `TOP_K`, `CONTEXT_CHUNKS`, `SIMILARITY_THRESHOLD`: retrieval tuning
 - `GEMINI_API_KEY`: Google Generative AI key for embeddings
 - `MISTRAL_API_KEY`: Mistral API key for generation
+- `GENERATE_RATE_WINDOW_MS`, `GENERATE_RATE_MAX`: per-route limiter for generation endpoints
 
 ## Notes
 - Strictly uses local docs; no external doc fetching.
 - Gemini for embeddings; Mistral for answers/code.
 - Rate-limited and sanitized.
 - Context-limited RAG; the LLM only sees relevant chunks.
+- Strict generator `/api/generateStrict` outputs a single code block only.
+- Validator `/api/validateAoi` runs deterministic checks before optional LLM reasoning.
