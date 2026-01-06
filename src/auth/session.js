@@ -14,10 +14,10 @@ export function issueJwt({ userId, sessionId, ttlMs }) {
   return token;
 }
 
-export function verifyJwt(token) {
+export async function verifyJwt(token) {
   try {
     const payload = jwt.verify(token, JWT_SECRET, { issuer: JWT_ISSUER, algorithms: ['HS256'] });
-    const session = getSession(payload.sid);
+    const session = await getSession(payload.sid);
     if (!session || session.revoked || session.expires_at <= Date.now()) return null;
     return { userId: payload.sub, sessionId: payload.sid };
   } catch {

@@ -8,7 +8,8 @@
   "scripts": {
     "dev": "node src/server.js",
     "start": "NODE_ENV=production node src/server.js",
-    "ingest": "node src/ingest.js"
+    "ingest": "node src/ingest.js",
+    "migrate:auth": "node scripts/migrate-auth-sqlite-to-mongo.js"
   },
   "engines": {
     "node": "20.x"
@@ -24,6 +25,7 @@
     "cookie-parser": "^1.4.6",
     "csurf": "^1.11.0",
     "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.7.0",
     "uuid": "^9.0.1"
   }
 }

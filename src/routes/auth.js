@@ -45,11 +45,11 @@ async function exchangeDiscordCode(code) {
 }
 
 router.use(cookieParser());
-router.use((req, _res, next) => {
+router.use(async (req, _res, next) => {
   const auth = String(req.headers.authorization || '').replace(/^Bearer\s+/i, '');
   const cookieToken = req.cookies?.session_token;
   const token = auth || cookieToken || '';
-  const verified = token ? verifyJwt(token) : null;
+  const verified = token ? await verifyJwt(token) : null;
   req.session = verified || null;
   next();
 });
@@ -68,14 +68,14 @@ router.get('/auth/callback', async (req, res) => {
     const code = String(req.query.code || '');
     if (!code) return res.status(400).json({ error: 'Missing code' });
     const { discordUser } = await exchangeDiscordCode(code);
-    const user = upsertUser({
+    const user = await upsertUser({
       discord_id: discordUser.id,
       username: discordUser.username,
       avatar: discordUser.avatar ? `https://cdn.discordapp.com/avatars/${discordUser.id}/${discordUser.avatar}.png` : null,
       email: discordUser.email || null
     });
     const ttlMs = Number(process.env.SESSION_TTL_MS || 86_400_000); // 24h default
-    const session = createSession(user.id, ttlMs);
+    const session = await createSession(user.id, ttlMs);
     const jwt = issueJwt({ userId: user.id, sessionId: session.id, ttlMs });
     res.cookie('session_token', jwt, {
       httpOnly: true,
@@ -90,10 +90,10 @@ router.get('/auth/callback', async (req, res) => {
   }
 });
 
-router.post('/logout', csrfProtection, (req, res) => {
+router.post('/logout', csrfProtection, async (req, res) => {
   try {
     const sid = req.session?.sessionId;
-    if (sid) revokeSession(sid);
+    if (sid) await revokeSession(sid);
     res.clearCookie('session_token');
     res.json({ ok: true });
   } catch {
@@ -101,22 +101,22 @@ router.post('/logout', csrfProtection, (req, res) => {
   }
 });
 
-router.get('/me', (req, res) => {
+router.get('/me', async (req, res) => {
   if (!req.session) return res.status(401).json({ error: 'Not authenticated' });
-  const user = getUserById(req.session.userId);
+  const user = await getUserById(req.session.userId);
   if (!user) return res.status(401).json({ error: 'Invalid session' });
   res.json({ id: user.id, username: user.username, avatar: user.avatar, email: user.email });
 });
 
 const keyCreateLimiter = rateLimit({ windowMs: 60_000, max: 5, standardHeaders: true, legacyHeaders: false });
 
-router.get('/api/keys', (req, res) => {
+router.get('/api/keys', async (req, res) => {
   if (!req.session) return res.status(401).json({ error: 'Not authenticated' });
-  const keys = listApiKeys(req.session.userId);
+  const keys = await listApiKeys(req.session.userId);
   res.json(keys);
 });
 
-router.post('/api/keys', csrfProtection, keyCreateLimiter, express.json(), (req, res) => {
+router.post('/api/keys', csrfProtection, keyCreateLimiter, express.json(), async (req, res) => {
   try {
     if (!req.session) return res.status(401).json({ error: 'Not authenticated' });
     const name = String(req.body?.name || '').slice(0, 64) || null;
@@ -124,7 +124,7 @@ router.post('/api/keys', csrfProtection, keyCreateLimiter, express.json(), (req,
     const secret = crypto.randomBytes(32).toString('hex');
     const fullKey = `ak_${id}.${secret}`;
     const hash = bcrypt.hashSync(fullKey, 12);
-    const rec = createApiKey(id, req.session.userId, name, hash);
+    const rec = await createApiKey(id, req.session.userId, name, hash);
     res.json({ id: rec.id, name: rec.name, created_at: rec.created_at, api_key: fullKey });
   } catch (err) {
     const msg = process.env.NODE_ENV === 'production' ? 'Key creation failed' : String(err?.message || err);
@@ -132,11 +132,11 @@ router.post('/api/keys', csrfProtection, keyCreateLimiter, express.json(), (req,
   }
 });
 
-router.post('/api/keys/:id/revoke', csrfProtection, (req, res) => {
+router.post('/api/keys/:id/revoke', csrfProtection, async (req, res) => {
   if (!req.session) return res.status(401).json({ error: 'Not authenticated' });
   const id = String(req.params.id || '');
   if (!id) return res.status(400).json({ error: 'Missing id' });
-  revokeApiKey(id);
+  await revokeApiKey(id);
   res.json({ ok: true });
 });
 

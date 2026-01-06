@@ -7,9 +7,9 @@ const router = express.Router();
 router.use(requireAdmin);
 router.use(adminLimiter);
 
-router.get('/users', (req, res) => {
+router.get('/users', async (_req, res) => {
   try {
-    const users = listUsersWithStats();
+    const users = await listUsersWithStats();
     const out = users.map(u => ({
       id: u.id,
       username: u.username,
@@ -25,11 +25,12 @@ router.get('/users', (req, res) => {
   }
 });
 
-router.get('/users/:userId/keys', (req, res) => {
+router.get('/users/:userId/keys', async (req, res) => {
   try {
     const userId = String(req.params.userId || '');
     if (!userId) return res.status(400).json({ error: 'Missing userId' });
-    const keys = listUserKeys(userId).map(k => ({
+    const rows = await listUserKeys(userId);
+    const keys = rows.map(k => ({
       id: k.id,
       name: k.name,
       created_at: k.created_at,

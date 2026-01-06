@@ -1,131 +1,101 @@
-import Database from 'better-sqlite3';
 import crypto from 'node:crypto';
+import { User, Session, ApiKey } from './models.js';
 
-const dbPath = process.env.SQLITE_DB_PATH || 'auth.db';
-export const db = new Database(dbPath, { verbose: undefined });
-
-db.exec(`
-CREATE TABLE IF NOT EXISTS users (
-  id TEXT PRIMARY KEY,
-  discord_id TEXT UNIQUE NOT NULL,
-  username TEXT,
-  avatar TEXT,
-  email TEXT,
-  created_at INTEGER NOT NULL
-);
-
-CREATE TABLE IF NOT EXISTS sessions (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  issued_at INTEGER NOT NULL,
-  expires_at INTEGER NOT NULL,
-  revoked INTEGER NOT NULL DEFAULT 0,
-  FOREIGN KEY(user_id) REFERENCES users(id)
-);
-
-CREATE TABLE IF NOT EXISTS api_keys (
-  id TEXT PRIMARY KEY,
-  user_id TEXT NOT NULL,
-  name TEXT,
-  hash TEXT NOT NULL,
-  created_at INTEGER NOT NULL,
-  last_used_at INTEGER,
-  request_count INTEGER NOT NULL DEFAULT 0,
-  revoked INTEGER NOT NULL DEFAULT 0,
-  FOREIGN KEY(user_id) REFERENCES users(id)
-);
-`);
-
-// Migration-safe addition of request_count if missing
-try {
-  const cols = db.prepare("PRAGMA table_info(api_keys)").all();
-  const hasReqCount = cols.some(c => c.name === 'request_count');
-  if (!hasReqCount) {
-    db.prepare('ALTER TABLE api_keys ADD COLUMN request_count INTEGER NOT NULL DEFAULT 0').run();
-  }
-} catch {}
-
-export function upsertUser({ discord_id, username, avatar, email }) {
+export async function upsertUser({ discord_id, username, avatar, email }) {
   const now = Date.now();
-  const existing = db.prepare('SELECT * FROM users WHERE discord_id = ?').get(discord_id);
+  const existing = await User.findOne({ discord_id }).lean();
   if (existing) {
-    db.prepare('UPDATE users SET username = ?, avatar = ?, email = ? WHERE discord_id = ?')
-      .run(username || existing.username, avatar || existing.avatar, email || existing.email, discord_id);
-    return db.prepare('SELECT * FROM users WHERE discord_id = ?').get(discord_id);
+    await User.updateOne(
+      { discord_id },
+      { $set: { username: username ?? existing.username, avatar: avatar ?? existing.avatar, email: email ?? existing.email } }
+    );
+    return await User.findOne({ discord_id }).lean();
   }
   const id = crypto.randomUUID();
-  db.prepare('INSERT INTO users (id, discord_id, username, avatar, email, created_at) VALUES (?, ?, ?, ?, ?, ?)')
-    .run(id, discord_id, username || null, avatar || null, email || null, now);
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+  await User.create({ id, discord_id, username: username ?? null, avatar: avatar ?? null, email: email ?? null, created_at: now });
+  return await User.findOne({ id }).lean();
 }
 
-export function createSession(userId, ttlMs) {
+export async function createSession(userId, ttlMs) {
   const id = crypto.randomUUID();
   const issued = Date.now();
   const expires = issued + ttlMs;
-  db.prepare('INSERT INTO sessions (id, user_id, issued_at, expires_at, revoked) VALUES (?, ?, ?, ?, 0)')
-    .run(id, userId, issued, expires);
+  await Session.create({ id, user_id: userId, issued_at: issued, expires_at: expires, revoked: 0 });
   return { id, user_id: userId, issued_at: issued, expires_at: expires, revoked: 0 };
 }
 
-export function getSession(sessionId) {
-  return db.prepare('SELECT * FROM sessions WHERE id = ?').get(sessionId);
+export async function getSession(sessionId) {
+  return await Session.findOne({ id: sessionId }).lean();
 }
 
-export function revokeSession(sessionId) {
-  db.prepare('UPDATE sessions SET revoked = 1 WHERE id = ?').run(sessionId);
+export async function revokeSession(sessionId) {
+  await Session.updateOne({ id: sessionId }, { $set: { revoked: 1 } });
 }
 
-export function getUserById(id) {
-  return db.prepare('SELECT * FROM users WHERE id = ?').get(id);
+export async function getUserById(id) {
+  return await User.findOne({ id }).lean();
 }
 
-export function getUserByDiscordId(discordId) {
-  return db.prepare('SELECT * FROM users WHERE discord_id = ?').get(discordId);
+export async function getUserByDiscordId(discordId) {
+  return await User.findOne({ discord_id: discordId }).lean();
 }
 
-export function createApiKey(id, userId, name, hash) {
+export async function createApiKey(id, userId, name, hash) {
   const now = Date.now();
-  db.prepare('INSERT INTO api_keys (id, user_id, name, hash, created_at, revoked) VALUES (?, ?, ?, ?, ?, 0)')
-    .run(id, userId, name || null, hash, now);
-  return db.prepare('SELECT id, user_id, name, created_at, revoked FROM api_keys WHERE id = ?').get(id);
+  await ApiKey.create({ id, user_id: userId, name: name ?? null, hash, created_at: now, revoked: 0 });
+  const rec = await ApiKey.findOne({ id }, { _id: 0, id: 1, user_id: 1, name: 1, created_at: 1, revoked: 1 }).lean();
+  return rec;
 }
 
-export function listApiKeys(userId) {
-  return db.prepare('SELECT id, name, created_at, last_used_at, revoked FROM api_keys WHERE user_id = ? ORDER BY created_at DESC')
-    .all(userId);
+export async function listApiKeys(userId) {
+  return await ApiKey.find({ user_id: userId }, { _id: 0, id: 1, name: 1, created_at: 1, last_used_at: 1, revoked: 1 })
+    .sort({ created_at: -1 })
+    .lean();
 }
 
-export function getApiKeyById(id) {
-  return db.prepare('SELECT * FROM api_keys WHERE id = ?').get(id);
+export async function getApiKeyById(id) {
+  return await ApiKey.findOne({ id }).lean();
 }
 
-export function updateApiKeyLastUsed(id) {
-  db.prepare('UPDATE api_keys SET last_used_at = ? WHERE id = ?').run(Date.now(), id);
+export async function updateApiKeyLastUsed(id) {
+  await ApiKey.updateOne({ id }, { $set: { last_used_at: Date.now() } });
 }
 
-export function revokeApiKey(id) {
-  db.prepare('UPDATE api_keys SET revoked = 1 WHERE id = ?').run(id);
+export async function revokeApiKey(id) {
+  await ApiKey.updateOne({ id }, { $set: { revoked: 1 } });
 }
 
-export function incrementApiKeyUsage(id) {
-  const now = Date.now();
-  db.prepare('UPDATE api_keys SET last_used_at = ?, request_count = request_count + 1 WHERE id = ?').run(now, id);
+export async function incrementApiKeyUsage(id) {
+  await ApiKey.updateOne({ id }, { $set: { last_used_at: Date.now() }, $inc: { request_count: 1 } });
 }
 
-export function listUsersWithStats() {
-  const sql = `
-    SELECT u.id, u.discord_id, u.username, u.avatar, u.email, u.created_at,
-           COUNT(k.id) AS key_count,
-           COALESCE(SUM(k.request_count), 0) AS request_total
-    FROM users u
-    LEFT JOIN api_keys k ON k.user_id = u.id
-    GROUP BY u.id
-    ORDER BY u.created_at DESC
-  `;
-  return db.prepare(sql).all();
+export async function listUsersWithStats() {
+  const pipeline = [
+    {
+      $lookup: {
+        from: 'api_keys',
+        localField: 'id',
+        foreignField: 'user_id',
+        as: 'keys'
+      }
+    },
+    {
+      $addFields: {
+        key_count: { $size: '$keys' },
+        request_total: { $sum: '$keys.request_count' }
+      }
+    },
+    { $project: { _id: 0, id: 1, discord_id: 1, username: 1, avatar: 1, email: 1, created_at: 1, key_count: 1, request_total: { $ifNull: ['$request_total', 0] } } },
+    { $sort: { created_at: -1 } }
+  ];
+  return await User.aggregate(pipeline).exec();
 }
 
-export function listUserKeys(userId) {
-  return db.prepare('SELECT id, name, created_at, last_used_at, request_count, revoked FROM api_keys WHERE user_id = ? ORDER BY created_at DESC').all(userId);
+export async function listUserKeys(userId) {
+  return await ApiKey.find(
+    { user_id: userId },
+    { _id: 0, id: 1, name: 1, created_at: 1, last_used_at: 1, request_count: 1, revoked: 1 }
+  )
+    .sort({ created_at: -1 })
+    .lean();
 }

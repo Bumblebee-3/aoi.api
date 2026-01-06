@@ -8,6 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import apiRootRouter from './routes/apiRoot.js';
+import { connectMongo } from './auth/mongoose.js';
 import authRouter from './routes/auth.js';
 import { apiKeyAuth } from './middleware/apiKeyAuth.js';
 import basicQueryRouter from './routes/basicQuery.js';
@@ -17,6 +18,9 @@ import validateAoiRouter from './routes/validateAoi.js';
 import adminRouter from './routes/admin.js';
 import { requireAdmin } from './middleware/requireAdmin.js';
 import assetsRouter from './routes/assets.js';
+
+// Connect to MongoDB at startup (fail fast on error)
+await connectMongo();
 
 const app = express();
 app.disable('x-powered-by');
