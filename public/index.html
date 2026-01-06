@@ -1,9 +1,11 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8" />
   <title>aoi.js RAG API</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/assets/raglogo.png" type="image/png" sizes="any" />
+  <link rel="apple-touch-icon" href="/assets/raglogo.png" />
   <script src="https://cdn.tailwindcss.com"></script>
   <script>
     tailwind.config = {
@@ -11,310 +13,185 @@
         extend: {
           colors: {
             brand: {
-              50: '#f5f7ff',
-              100: '#e9edff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca'
-            }
-          }
-        }
+              600: "#6366f1",
+              700: "#4f46e5",
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    body {
+      background:
+        radial-gradient(circle at 20% 20%, rgba(99,102,241,0.15), transparent 40%),
+        radial-gradient(circle at 80% 80%, rgba(34,211,238,0.12), transparent 40%),
+        #020617;
+    }
+
+    @keyframes float {
+      0% { transform: translateY(0); }
+      50% { transform: translateY(-12px); }
+      100% { transform: translateY(0); }
+    }
+
+    .animate-float {
+      animation: float 6s ease-in-out infinite;
+    }
+
+    @keyframes fadeUp {
+      from {
+        opacity: 0;
+        transform: translateY(24px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
       }
     }
-  </script>
-</head>
-<body class="min-h-screen bg-slate-900 text-slate-200">
-  <!-- Animated background -->
-  <style>
-    @keyframes floatSlow {
-      0% { transform: translateY(0px) translateX(0px) scale(1); }
-      50% { transform: translateY(-30px) translateX(20px) scale(1.05); }
-      100% { transform: translateY(0px) translateX(0px) scale(1); }
+
+    .section-animate {
+      animation: fadeUp 0.7s ease-out both;
     }
-    @keyframes drift {
-      0% { transform: translate(-10%, -10%) rotate(0deg); }
-      50% { transform: translate(10%, 5%) rotate(10deg); }
-      100% { transform: translate(-10%, -10%) rotate(0deg); }
-    }
-    /* Improve code/output readability on small screens */
-    .code-out { white-space: pre-wrap; word-break: break-word; overflow-x: auto; }
-    .wrap-any { overflow-wrap: anywhere; word-break: break-word; }
   </style>
-  <div class="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-    <div class="absolute left-[-10%] top-[-10%] h-[40rem] w-[40rem] rounded-full bg-cyan-400/10 blur-3xl animate-[drift_22s_ease-in-out_infinite]"></div>
-    <div class="absolute right-[-15%] bottom-[-15%] h-[45rem] w-[45rem] rounded-full bg-sky-500/10 blur-3xl animate-[drift_28s_ease-in-out_infinite]"></div>
-    <div class="absolute left-1/2 top-1/3 h-[18rem] w-[18rem] -translate-x-1/2 rounded-full bg-blue-300/10 blur-2xl animate-[floatSlow_12s_ease-in-out_infinite]"></div>
-    <div class="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/40 to-slate-900"></div>
-  </div>
-  <!-- Header -->
-  <header class="bg-gradient-to-r from-slate-800 via-slate-800 to-slate-900 text-slate-200 border-b border-slate-800">
-    <div class="mx-auto max-w-6xl px-4 py-6 flex items-center justify-between">
+</head>
+
+<body class="min-h-screen text-slate-200">
+  <header class="sticky top-0 z-50 border-b border-slate-800 bg-slate-950/80 backdrop-blur">
+    <div class="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
       <div class="flex items-center gap-3">
-        <span class="inline-flex h-8 w-8 items-center justify-center rounded bg-cyan-500/20 text-cyan-200 font-bold">a</span>
-        <h1 class="text-xl font-semibold text-slate-100">aoi.js RAG API</h1>
+        <img
+          src="/assets/raglogo.png"
+          alt="aoi.js logo"
+          class="h-9 w-9 rounded-lg shadow"
+        />
+        <h1 class="text-xl font-semibold tracking-tight">
+          aoi.js <span class="text-cyan-300">RAG</span> API
+        </h1>
       </div>
-      <nav class="text-sm flex items-center gap-4">
-        <a href="https://aoi.js.org/" target="_blank" rel="noopener" class="text-cyan-300 hover:text-cyan-200">Docs</a>
-        <button id="loginBtn" class="rounded bg-brand-600 px-3 py-1.5 text-white text-sm hover:bg-brand-700">Login with Discord</button>
-        <div id="userMenu" class="hidden items-center gap-3">
-          <img id="userAvatar" src="" alt="avatar" class="h-8 w-8 rounded-full border border-slate-700" />
-          <span id="userName" class="text-slate-200"></span>
-          <button id="logoutBtn" class="rounded bg-slate-700 px-3 py-1.5 text-white text-sm hover:bg-slate-600">Logout</button>
-        </div>
+
+      <nav class="flex gap-4 text-sm">
+        <a href="#overview" class="hover:text-cyan-300">Overview</a>
+        <a href="#endpoints" class="hover:text-cyan-300">Endpoints</a>
+        <a href="/dashboard" class="hover:text-cyan-300">Dashboard</a>
       </nav>
     </div>
   </header>
 
-  <main class="mx-auto max-w-6xl px-4 py-8">
-    <!-- Overview -->
-    <section class="mb-8">
-      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
-        <div class="border-b border-slate-800 px-6 py-4">
-          <h2 class="text-lg font-semibold text-slate-100">Overview</h2>
-        </div>
-        <div class="px-6 py-4">
-          <p id="api-name" class="font-medium text-slate-100">Loading API...</p>
-          <p id="api-desc" class="text-slate-400 text-sm mt-1">Fetching description</p>
-        </div>
-      </div>
-    </section>
+  <main class="mx-auto max-w-6xl px-6 py-10">
+    <section class="relative mb-10 overflow-hidden rounded-xl border border-slate-800 bg-slate-900/80 shadow-lg">
+      <div class="absolute inset-0 bg-gradient-to-br from-cyan-500/10 via-indigo-500/10 to-purple-500/10"></div>
 
-    <!-- Endpoints -->
-    <section class="mb-8">
-      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
-        <div class="border-b border-slate-800 px-6 py-4 flex items-center justify-between">
-          <h2 class="text-lg font-semibold text-slate-100">Endpoints</h2>
-          <button id="refreshBtn" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Refresh</button>
-        </div>
-        <div class="px-6 py-4">
-          <div class="overflow-x-auto hidden md:block">
-            <table class="w-full text-sm table-fixed">
-              <colgroup>
-                <col style="width:8%">
-                <col style="width:18%">
-                <col style="width:22%">
-                <col style="width:42%">
-                <col style="width:10%">
-              </colgroup>
-              <thead>
-                <tr class="text-left text-slate-400">
-                  <th class="py-2">Method</th>
-                  <th class="py-2">Path</th>
-                  <th class="py-2">Description</th>
-                  <th class="py-2">Params</th>
-                  <th class="py-2">Example</th>
-                </tr>
-              </thead>
-              <tbody id="endpointsTable"></tbody>
-            </table>
+      <div class="relative z-10 px-6 py-14">
+        <div class="grid items-center gap-8 md:grid-cols-2">
+          <!-- Left: headline + description + CTAs -->
+          <div class="text-left">
+            <h2 class="text-4xl sm:text-5xl md:text-6xl font-extrabold tracking-tight">
+              <span class="bg-gradient-to-r from-cyan-300 via-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                Build powerful Discord bots using aoi.js
+              </span>
+            </h2>
+            <p class="mt-4 max-w-xl text-slate-300 text-sm sm:text-base">
+              A fast, documentation‑strict RAG API that helps you write, validate,
+              and explain <span class="text-indigo-300">aoi.js</span> code with confidence.
+            </p>
+            <div class="mt-6 flex flex-wrap gap-3">
+              <a
+                href="/dashboard"
+                class="rounded-lg bg-brand-600 px-5 py-2 text-sm font-semibold text-white shadow-lg transition hover:scale-105 hover:bg-brand-700"
+              >
+                Getting Started
+              </a>
+              <a
+                href="https://aoi.js.org/"
+                target="_blank"
+                class="rounded-lg border border-slate-700 px-5 py-2 text-sm text-slate-200 transition hover:border-cyan-400 hover:text-cyan-300"
+              >
+                aoi.js Docs
+              </a>
+            </div>
           </div>
-          <!-- Mobile cards -->
-          <div id="endpointsCards" class="md:hidden grid gap-3"></div>
-        </div>
-      </div>
-    </section>
 
-    <!-- Try Endpoints -->
-    <section class="grid gap-6 md:grid-cols-2">
-      <!-- basicQuery tester -->
-      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
-        <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/basicQuery</h3></div>
-        <div class="px-6 py-4 space-y-3">
-          <label class="block text-sm font-medium text-slate-300">Request</label>
-          <input id="tq_request" type="text" placeholder="How to add a button?" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
-          <label class="block text-sm font-medium text-slate-300">Mode</label>
-          <select id="tq_mode" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2">
-            <option value="">answer</option>
-            <option value="code">code</option>
-          </select>
-          <button id="btn_run_basicQuery" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
-          <pre id="out_basicQuery" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
-        </div>
-      </div>
-
-      <!-- function tester -->
-      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
-        <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/function</h3></div>
-        <div class="px-6 py-4 space-y-3">
-          <label class="block text-sm font-medium text-slate-300">Function name (without $)</label>
-          <input id="tf_name" type="text" placeholder="addButton" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
-          <button id="btn_run_function" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
-          <pre id="out_function" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
-        </div>
-      </div>
-
-      <!-- generateStrict tester -->
-      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
-        <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/generateStrict</h3></div>
-        <div class="px-6 py-4 space-y-3">
-          <label class="block text-sm font-medium text-slate-300">Request</label>
-          <input id="tg_request" type="text" placeholder="ping command in aoi.js" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
-          <label class="block text-sm font-medium text-slate-300">Max tokens (optional)</label>
-          <input id="tg_tokens" type="number" min="100" max="2000" placeholder="600" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
-          <button id="btn_run_generateStrict" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
-          <pre id="out_generateStrict" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
-        </div>
-      </div>
-
-      <!-- validateAoi tester -->
-      <div class="rounded-lg border border-slate-800 bg-slate-900/80 shadow-sm">
-        <div class="border-b border-slate-800 px-6 py-4"><h3 class="font-semibold text-slate-100">Try: /api/validateAoi</h3></div>
-        <div class="px-6 py-4 space-y-3">
-          <label class="block text-sm font-medium text-slate-300">aoi.js Code (supports fenced blocks)</label>
-          <textarea id="tv_code" rows="5" placeholder="```js\n$sendMessage[hello;false]\n```" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500"></textarea>
-          <label class="block text-sm font-medium text-slate-300">Request / intent (optional)</label>
-          <input id="tv_intent" type="text" placeholder="diagnose" class="w-full rounded border border-slate-700 bg-slate-800 text-slate-100 px-3 py-2 placeholder:text-slate-500" />
-          <div class="flex items-center gap-2">
-            <input id="tv_fix" type="checkbox" class="rounded border border-slate-700 bg-slate-800" />
-            <label for="tv_fix" class="text-sm text-slate-300">Request minimal fix (mode=fix)</label>
+          <!-- Right: mascot image -->
+          <div class="flex justify-center md:justify-end">
+            <img
+              src="/assets/birbwithbook.png"
+              alt="aoi.js mascot"
+              class="h-40 w-40 sm:h-56 sm:w-56 md:h-72 md:w-72 animate-float drop-shadow-[0_0_25px_rgba(99,102,241,0.35)]"
+            />
           </div>
-          <button id="btn_run_validateAoi" class="rounded bg-cyan-600 px-3 py-1.5 text-white text-sm hover:bg-cyan-700">Run</button>
-          <pre id="out_validateAoi" class="code-out mt-3 max-h-64 rounded bg-slate-800 text-slate-100 p-3 text-xs"></pre>
         </div>
       </div>
     </section>
+
+    <section id="overview" class="mb-8 section-animate">
+      <div class="rounded-lg border border-slate-800 bg-slate-900/80 p-6 transition hover:-translate-y-1 hover:shadow-xl">
+        <h3 class="mb-3 text-lg font-semibold text-cyan-300">Overview</h3>
+        <p class="text-sm text-slate-300">
+          The aoi.js RAG API validates, analyzes, and explains aoi.js code using
+          a Retrieval-Augmented Generation pipeline built directly on official documentation.
+        </p>
+      </div>
+    </section>
+
+    <section id="endpoints" class="mb-8 section-animate">
+      <div class="rounded-lg border border-slate-800 bg-slate-900/80 p-6 transition hover:-translate-y-1 hover:shadow-xl">
+        <h3 class="mb-3 text-lg font-semibold text-cyan-300">Endpoints</h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead>
+              <tr class="text-left text-slate-400">
+                <th class="py-2 pr-4">Method</th>
+                <th class="py-2 pr-4">Path</th>
+                <th class="py-2 pr-4">Description</th>
+                <th class="py-2">Example</th>
+              </tr>
+            </thead>
+            <tbody class="text-slate-300">
+              <tr class="border-t border-slate-800">
+                <td class="py-2 pr-4"><span class="inline-block rounded bg-slate-800 px-2 py-0.5 text-xs">GET</span></td>
+                <td class="py-2 pr-4 font-mono">/api</td>
+                <td class="py-2 pr-4">Lists all available endpoints, descriptions, and example usage.</td>
+                <td class="py-2"><code class="font-mono">/api</code></td>
+              </tr>
+              <tr class="border-t border-slate-800">
+                <td class="py-2 pr-4"><span class="inline-block rounded bg-slate-800 px-2 py-0.5 text-xs">GET</span></td>
+                <td class="py-2 pr-4 font-mono">/api/basicQuery</td>
+                <td class="py-2 pr-4">Answers aoi.js questions strictly from local docs using RAG.</td>
+                <td class="py-2"><code class="font-mono">/api/basicQuery?request=What+is+aoi.js</code></td>
+              </tr>
+              <tr class="border-t border-slate-800">
+                <td class="py-2 pr-4"><span class="inline-block rounded bg-slate-800 px-2 py-0.5 text-xs">GET</span></td>
+                <td class="py-2 pr-4 font-mono">/api/function</td>
+                <td class="py-2 pr-4">Returns syntax, description, parameters, examples for a given aoi.js function.</td>
+                <td class="py-2"><code class="font-mono">/api/function?name=addButton</code></td>
+              </tr>
+              <tr class="border-t border-slate-800">
+                <td class="py-2 pr-4"><span class="inline-block rounded bg-slate-800 px-2 py-0.5 text-xs">GET</span></td>
+                <td class="py-2 pr-4 font-mono">/api/generateStrict</td>
+                <td class="py-2 pr-4">Strict aoi.js code generator using only local docs. Returns a single code block.</td>
+                <td class="py-2"><code class="font-mono">/api/generateStrict?request=Economy+daily+command</code></td>
+              </tr>
+              <tr class="border-t border-slate-800">
+                <td class="py-2 pr-4"><span class="inline-block rounded bg-slate-800 px-2 py-0.5 text-xs">GET</span></td>
+                <td class="py-2 pr-4 font-mono">/api/validateAoi</td>
+                <td class="py-2 pr-4">Validates aoi.js code (syntax, docs, logic). Optional minimal fix with <code class="font-mono">mode=fix</code>.</td>
+                <td class="py-2"><code class="font-mono">/api/validateAoi?code=```$sendMessage[hello;false]```&mode=fix</code></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="mt-3 text-sm text-slate-400">Requires a valid API key generated via the Dashboard.</p>
+      </div>
+    </section>
+
     
 
-    <!-- Footer -->
-    <footer class="mt-12 text-center text-xs text-slate-500">
-      <p>© <span id="year"></span> aoi.js RAG API • Local-docs only • Tailwind CDN</p>
-    </footer>
   </main>
 
-  <script>
-    const $ = (sel) => document.querySelector(sel);
-
-    function getCookie(name) {
-      return document.cookie.split('; ').find(row => row.startsWith(name + '='))?.split('=')[1] || '';
-    }
-
-    async function loadApiIndex() {
-      try {
-        const res = await fetch('/api');
-        if (!res.ok) throw new Error('Failed to fetch /api');
-        const data = await res.json();
-        $('#api-name').textContent = data.name || 'aoi.js RAG API';
-        $('#api-desc').textContent = data.description || 'Doc-constrained API for aoi.js help.';
-        const tbody = $('#endpointsTable');
-        tbody.innerHTML = '';
-        (data.endpoints || []).forEach(ep => {
-          const tr = document.createElement('tr');
-          tr.className = 'border-t';
-          const paramsHtml = (ep.params||[]).map(p=>{
-            const req = p.required ? '<span class="text-rose-300">*</span>' : '<span class="text-slate-500">(opt)</span>';
-            return `<div class=\"py-0.5\"><span class=\"font-mono\">${p.name}</span> ${req}<span class=\"text-slate-400\"> - ${p.description||''}</span></div>`;
-          }).join('');
-          tr.innerHTML = `
-            <td class="py-2 align-top"><span class="inline-block rounded bg-gray-800 px-2 py-0.5 text-white text-xs">${ep.method}</span></td>
-            <td class="py-2 font-mono align-top">${ep.path}</td>
-            <td class="py-2 align-top wrap-any">${ep.description || ''}</td>
-            <td class="py-2 align-top wrap-any">${paramsHtml || ''}</td>
-            <td class="py-2 font-mono text-xs align-top wrap-any"><a class="text-brand-600 hover:underline break-all" href="${ep.example}" target="_blank" rel="noopener">${ep.example || ''}</a></td>
-          `;
-          tbody.appendChild(tr);
-        });
-
-        // Mobile cards
-        const cards = document.getElementById('endpointsCards');
-        if (cards) {
-          cards.innerHTML = '';
-          (data.endpoints || []).forEach(ep => {
-            const card = document.createElement('div');
-            card.className = 'rounded border border-slate-800 bg-slate-900/80 p-4';
-            const paramsHtml = (ep.params||[]).map(p=>{
-              const req = p.required ? '<span class="text-rose-300">*</span>' : '<span class="text-slate-500">(opt)</span>';
-              return `<div class=\"py-0.5\"><span class=\"font-mono\">${p.name}</span> ${req}<span class=\"text-slate-400\"> - ${p.description||''}</span></div>`;
-            }).join('');
-            card.innerHTML = `
-              <div class=\"flex items-start justify-between gap-3\">
-                <div>
-                  <div class=\"text-xs uppercase tracking-wide text-slate-400\">${ep.method}</div>
-                  <div class=\"font-mono text-slate-100 break-all\">${ep.path}</div>
-                </div>
-                <a class=\"text-brand-600 text-xs hover:underline break-all\" href=\"${ep.example}\" target=\"_blank\" rel=\"noopener\">Example</a>
-              </div>
-              <p class=\"mt-2 text-sm text-slate-300 wrap-any\">${ep.description || ''}</p>
-              ${paramsHtml ? `<div class=\\"mt-3 text-xs text-slate-300 wrap-any\\">${paramsHtml}</div>` : ''}
-            `;
-            cards.appendChild(card);
-          });
-        }
-      } catch (e) {
-        $('#api-name').textContent = 'Failed to load API index';
-        $('#api-desc').textContent = e.message;
-      }
-    }
-
-    async function checkSession() {
-      try {
-        const res = await fetch('/auth/me');
-        if (!res.ok) throw new Error('not logged in');
-        const me = await res.json();
-        // Header UI
-        $('#loginBtn').classList.add('hidden');
-        $('#userMenu').classList.remove('hidden');
-        $('#userName').textContent = me.username || 'User';
-        const defaultIndex = (()=>{ try { return Number(BigInt(me.discord_id||'0') % 6n); } catch { return 0; } })();
-        const avatarUrl = me.avatar && me.discord_id
-          ? `https://cdn.discordapp.com/avatars/${me.discord_id}/${me.avatar}.png`
-          : `https://cdn.discordapp.com/embed/avatars/${defaultIndex}.png`;
-        $('#userAvatar').src = avatarUrl;
-      } catch {
-        // Not logged in
-        $('#loginBtn').classList.remove('hidden');
-        $('#userMenu').classList.add('hidden');
-      }
-    }
-
-    async function doLogout() {
-      const csrf = decodeURIComponent(getCookie('csrf_token'));
-      try {
-        await fetch('/auth/logout', { method: 'POST', headers: { 'x-csrf-token': csrf } });
-      } finally {
-        location.reload();
-      }
-    }
-
-
-    document.addEventListener('DOMContentLoaded', () => {
-      $('#year').textContent = new Date().getFullYear();
-      loadApiIndex();
-      $('#refreshBtn').addEventListener('click', loadApiIndex);
-      $('#loginBtn').addEventListener('click', () => { window.location.href = '/auth/login'; });
-      $('#logoutBtn').addEventListener('click', doLogout);
-      checkSession();
-      // bind testers
-      document.getElementById('btn_run_basicQuery')?.addEventListener('click', async ()=>{
-        const request = (document.getElementById('tq_request').value||'').trim();
-        const mode = (document.getElementById('tq_mode').value||'').trim();
-        if(!request){ document.getElementById('out_basicQuery').textContent='Please enter a request.'; return; }
-        const url = new URL('/api/basicQuery', window.location.origin);
-        url.searchParams.set('request', request);
-        if(mode) url.searchParams.set('mode', mode);
-        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_basicQuery').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_basicQuery').textContent=e.message; }
-      });
-      document.getElementById('btn_run_function')?.addEventListener('click', async ()=>{
-        const name = (document.getElementById('tf_name').value||'').trim();
-        if(!name){ document.getElementById('out_function').textContent='Please enter a function name.'; return; }
-        const url = new URL('/api/function', window.location.origin); url.searchParams.set('name', name);
-        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_function').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_function').textContent=e.message; }
-      });
-      document.getElementById('btn_run_generateStrict')?.addEventListener('click', async ()=>{
-        const request = (document.getElementById('tg_request').value||'').trim();
-        const maxTokens = (document.getElementById('tg_tokens').value||'').trim();
-        if(!request){ document.getElementById('out_generateStrict').textContent='Please enter a request.'; return; }
-        const url = new URL('/api/generateStrict', window.location.origin); url.searchParams.set('request', request); if(maxTokens) url.searchParams.set('max_tokens', maxTokens);
-        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_generateStrict').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_generateStrict').textContent=e.message; }
-      });
-      document.getElementById('btn_run_validateAoi')?.addEventListener('click', async ()=>{
-        const code = (document.getElementById('tv_code').value||'').trim();
-        const intent = (document.getElementById('tv_intent').value||'').trim();
-        const fix = document.getElementById('tv_fix').checked;
-        if(!code){ document.getElementById('out_validateAoi').textContent='Please enter aoi.js code.'; return; }
-        const url = new URL('/api/validateAoi', window.location.origin); url.searchParams.set('code', code); if(intent) url.searchParams.set('request', intent); if(fix) url.searchParams.set('mode','fix');
-        try{ const r = await fetch(url.toString()); const j = await r.json(); document.getElementById('out_validateAoi').textContent = JSON.stringify(j,null,2);}catch(e){ document.getElementById('out_validateAoi').textContent=e.message; }
-      });
-    });
-  </script>
+  <footer class="border-t border-slate-800 py-6 text-center text-xs text-slate-500">
+    © 2026 aoi.js RAG API — Built for developers
+  </footer>
 </body>
 </html>

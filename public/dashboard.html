@@ -1,0 +1,263 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>aoi.js API Dashboard</title>
+    <link rel="icon" href="/assets/raglogo.png" type="image/png" sizes="any" />
+    <link rel="apple-touch-icon" href="/assets/raglogo.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+  </head>
+  <body class="bg-slate-950 text-slate-100">
+    <div class="max-w-5xl mx-auto p-4">
+      <header class="flex items-center justify-between mb-6">
+        <h1 class="text-2xl font-semibold">aoi.js API Dashboard</h1>
+        <div id="authArea" class="flex items-center gap-3"></div>
+      </header>
+
+      <section id="profile" class="mb-8 hidden">
+        <div class="bg-slate-900 rounded p-4 flex items-center gap-4">
+          <img id="avatar" class="w-12 h-12 rounded" alt="avatar" />
+          <div>
+            <div id="username" class="text-lg font-medium"></div>
+            <div id="email" class="text-sm text-slate-400"></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="grid md:grid-cols-2 gap-6">
+        <div class="bg-slate-900 rounded p-4">
+          <h2 class="text-lg font-semibold mb-3">API Keys</h2>
+          <form id="createKeyForm" class="flex gap-2 mb-3">
+            <input id="keyName" type="text" placeholder="Key name (optional)" class="flex-1 rounded bg-slate-800 px-3 py-2 text-sm" />
+            <button class="rounded bg-brand-600 px-3 py-2 text-sm hover:bg-brand-500" type="submit">Create</button>
+          </form>
+          <div id="keyWarning" class="mb-3 rounded border border-rose-600 bg-rose-950/50 text-rose-200 text-xs p-3 flex items-start gap-2">
+            <span class="inline-flex items-center justify-center rounded-full bg-rose-600/80 w-4 h-4 text-[10px]">!</span>
+            <div>
+              <div class="font-medium">Important</div>
+              <div>API keys are visible only once at creation. Store securely.</div>
+            </div>
+          </div>
+          <div id="newKeyBox" class="hidden mb-3 rounded border border-emerald-600 bg-emerald-950/40 p-3">
+            <div class="text-xs text-emerald-300 mb-1">New API Key</div>
+            <div class="flex items-center gap-2">
+              <code id="newKey" class="text-xs break-all flex-1"></code>
+              <button id="copyNewKey" class="rounded bg-emerald-600 px-2 py-1 text-xs hover:bg-emerald-500">Copy</button>
+            </div>
+            <div class="mt-2 text-[11px] text-emerald-400">You will not be able to view this key again.</div>
+          </div>
+          <ul id="keysList" class="space-y-2"></ul>
+        </div>
+
+        <div class="bg-slate-900 rounded p-4">
+          <h2 class="text-lg font-semibold mb-3">Try Endpoints</h2>
+          <div class="mb-2">
+            <label class="block text-xs text-slate-400 mb-1">API Key</label>
+            <input id="testerKey" type="text" placeholder="ak_..." class="w-full rounded bg-slate-800 px-3 py-2 text-sm" />
+          </div>
+          <div class="space-y-2">
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">basicQuery</label>
+              <div class="flex gap-2">
+                <input id="qInput" class="flex-1 rounded bg-slate-800 px-3 py-2 text-sm" placeholder="What is aoi.js?" />
+                <button id="runBasic" class="rounded bg-brand-600 px-3 py-2 text-sm">Run</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">function</label>
+              <div class="flex gap-2">
+                <input id="fnInput" class="flex-1 rounded bg-slate-800 px-3 py-2 text-sm" placeholder="addButton" />
+                <button id="runFunction" class="rounded bg-brand-600 px-3 py-2 text-sm">Run</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">generateStrict</label>
+              <div class="flex gap-2">
+                <input id="genInput" class="flex-1 rounded bg-slate-800 px-3 py-2 text-sm" placeholder="Economy daily command" />
+                <button id="runGenerate" class="rounded bg-brand-600 px-3 py-2 text-sm">Run</button>
+              </div>
+            </div>
+            <div>
+              <label class="block text-xs text-slate-400 mb-1">validateAoi</label>
+              <textarea id="valCode" class="w-full rounded bg-slate-800 px-3 py-2 text-sm mb-2" rows="6" placeholder="Paste aoi.js code here..."></textarea>
+              <div class="flex gap-2">
+                <input id="valReq" class="flex-1 rounded bg-slate-800 px-3 py-2 text-sm" placeholder="Optional intent (e.g., diagnose)" />
+                <select id="valMode" class="rounded bg-slate-800 px-3 py-2 text-sm">
+                  <option value="">mode</option>
+                  <option value="fix">fix</option>
+                </select>
+                <button id="runValidate" class="rounded bg-brand-600 px-3 py-2 text-sm">Run</button>
+              </div>
+            </div>
+          </div>
+          <pre id="testerOut" class="mt-3 text-sm bg-slate-800 rounded p-3 overflow-auto min-h-[240px]"></pre>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      async function refreshMe() {
+        const me = await fetch('/me').then(r=>r.ok?r.json():null).catch(()=>null);
+        const area = document.getElementById('authArea');
+        area.innerHTML = '';
+        if (!me) {
+          const a = document.createElement('a');
+          a.href = '/login';
+          a.className = 'rounded bg-brand-600 px-3 py-2 text-sm';
+          a.textContent = 'Login with Discord';
+          area.appendChild(a);
+          return;
+        }
+        document.getElementById('profile').classList.remove('hidden');
+        document.getElementById('username').textContent = me.username || '';
+        document.getElementById('email').textContent = me.email || '';
+        document.getElementById('avatar').src = me.avatar || 'https://placehold.co/64x64';
+        const btn = document.createElement('button');
+        btn.className = 'rounded bg-slate-800 px-3 py-2 text-sm';
+        btn.textContent = 'Logout';
+        btn.onclick = async () => {
+          await fetch('/logout', { method: 'POST', headers: { 'x-csrf-token': getCookie('XSRF-TOKEN') } });
+          location.href = '/';
+        };
+        area.appendChild(btn);
+      }
+
+      function getCookie(name){
+        const m = document.cookie.match('(^|;)\\s*' + name + '\\s*=\\s*([^;]+)');
+        return m ? m.pop() : '';
+      }
+
+      async function refreshKeys(){
+        const res = await fetch('/api/keys');
+        const keys = res.ok ? await res.json() : [];
+        const ul = document.getElementById('keysList');
+        ul.innerHTML = '';
+        keys.forEach(k => {
+          const li = document.createElement('li');
+          li.className = 'flex items-center justify-between rounded bg-slate-800 p-2';
+          li.innerHTML = `<div class=\"text-xs\">${k.name||'(unnamed)'} · created ${new Date(k.created_at).toLocaleString()} ${k.revoked?'· revoked':''}</div>`;
+          const btn = document.createElement('button');
+          btn.className = 'rounded px-2 py-1 text-xs';
+          if (k.revoked) {
+            btn.textContent = 'Revoked';
+            btn.disabled = true;
+            btn.classList.add('bg-slate-700','text-slate-300','opacity-60','cursor-not-allowed');
+          } else {
+            btn.textContent = 'Revoke';
+            btn.classList.add('bg-rose-600');
+            btn.onclick = async () => {
+              await fetch('/api/keys/'+k.id+'/revoke', { method:'POST', headers: { 'x-csrf-token': getCookie('XSRF-TOKEN') } });
+              refreshKeys();
+            };
+          }
+          li.appendChild(btn);
+          ul.appendChild(li);
+        });
+      }
+
+      document.getElementById('createKeyForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        await fetch('/csrf');
+        const name = document.getElementById('keyName').value.trim();
+        const res = await fetch('/api/keys', { method:'POST', headers: { 'Content-Type':'application/json', 'x-csrf-token': getCookie('XSRF-TOKEN') }, body: JSON.stringify({ name }) });
+        const json = await res.json();
+        if (json.api_key) {
+          document.getElementById('newKey').textContent = json.api_key;
+          document.getElementById('newKeyBox').classList.remove('hidden');
+          document.getElementById('testerKey').value = json.api_key;
+          refreshKeys();
+        } else {
+          document.getElementById('newKey').textContent = 'Error: ' + (json.error||'unknown');
+        }
+      });
+
+      document.getElementById('copyNewKey').addEventListener('click', async () => {
+        const key = document.getElementById('newKey').textContent.trim();
+        try {
+          await navigator.clipboard.writeText(key);
+          const btn = document.getElementById('copyNewKey');
+          const prev = btn.textContent;
+          btn.textContent = 'Copied!';
+          btn.disabled = true;
+          setTimeout(() => { btn.textContent = prev; btn.disabled = false; }, 1200);
+        } catch (e) {
+          
+          const range = document.createRange();
+          range.selectNodeContents(document.getElementById('newKey'));
+          const sel = window.getSelection();
+          sel.removeAllRanges();
+          sel.addRange(range);
+          const btn = document.getElementById('copyNewKey');
+          btn.textContent = 'Select + Copy';
+          setTimeout(() => { btn.textContent = 'Copy'; }, 1500);
+        }
+      });
+
+      function withLoading(btn, fn) {
+        return async function() {
+          const orig = btn.innerHTML;
+          btn.disabled = true;
+          btn.classList.add('opacity-80','cursor-not-allowed');
+          btn.innerHTML = '<span class="inline-flex items-center gap-2"><span class="inline-block w-4 h-4 border-2 border-white/70 border-t-transparent rounded-full animate-spin"></span><span>Running...</span></span>';
+          try {
+            await fn();
+          } finally {
+            btn.disabled = false;
+            btn.classList.remove('opacity-80','cursor-not-allowed');
+            btn.innerHTML = orig;
+          }
+        }
+      }
+
+      const runBasicBtn = document.getElementById('runBasic');
+      runBasicBtn.onclick = withLoading(runBasicBtn, async () => {
+        const key = document.getElementById('testerKey').value.trim();
+        const q = encodeURIComponent(document.getElementById('qInput').value.trim());
+        const url = '/api/basicQuery?q='+q+'&apikey='+encodeURIComponent(key);
+        const res = await fetch(url);
+        document.getElementById('testerOut').textContent = await res.text();
+      });
+
+      const runFunctionBtn = document.getElementById('runFunction');
+      runFunctionBtn.onclick = withLoading(runFunctionBtn, async () => {
+        const key = document.getElementById('testerKey').value.trim();
+        const fn = encodeURIComponent(document.getElementById('fnInput').value.trim());
+        const url = '/api/function?name='+fn+'&apikey='+encodeURIComponent(key);
+        const res = await fetch(url);
+        document.getElementById('testerOut').textContent = await res.text();
+      });
+
+      const runGenerateBtn = document.getElementById('runGenerate');
+      runGenerateBtn.onclick = withLoading(runGenerateBtn, async () => {
+        const key = document.getElementById('testerKey').value.trim();
+        const rq = encodeURIComponent(document.getElementById('genInput').value.trim());
+        const url = '/api/generateStrict?request='+rq+'&apikey='+encodeURIComponent(key);
+        const res = await fetch(url);
+        document.getElementById('testerOut').textContent = await res.text();
+      });
+
+      const runValidateBtn = document.getElementById('runValidate');
+      runValidateBtn.onclick = withLoading(runValidateBtn, async () => {
+        const key = document.getElementById('testerKey').value.trim();
+        const code = encodeURIComponent(document.getElementById('valCode').value.trim());
+        const req = encodeURIComponent(document.getElementById('valReq').value.trim());
+        const mode = encodeURIComponent(document.getElementById('valMode').value);
+        let url = '/api/validateAoi?code='+code+'&apikey='+encodeURIComponent(key);
+        if (req) url += '&request=' + req;
+        if (mode) url += '&mode=' + mode;
+        const res = await fetch(url);
+        document.getElementById('testerOut').textContent = await res.text();
+      });
+
+
+      (async function init(){
+        await fetch('/csrf');
+        await refreshMe();
+        if (document.getElementById('profile').classList.contains('hidden') === false) {
+          refreshKeys();
+        }
+      })();
+    </script>
+  </body>
+  </html>
